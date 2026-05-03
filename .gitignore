@@ -33,7 +33,7 @@ yarn-error.log*
 *.ear
 target/
 
-# C/C++ / Build
+# Build
 bin/
 obj/
 out/
@@ -41,6 +41,7 @@ out/
 *.so
 *.dll
 *.exe
+*.slnLaunch.user
 
 # MATLAB
 *.mex*
