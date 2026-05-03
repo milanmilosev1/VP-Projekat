@@ -1,0 +1,15 @@
+[
+  {
+    "Name": "New Profile",
+    "Projects": [
+      {
+        "Path": "SmartGrid.Server\\SmartGrid.Server.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "SmartGrid.Client\\SmartGrid.Client.csproj",
+        "Action": "Start"
+      }
+    ]
+  }
+]

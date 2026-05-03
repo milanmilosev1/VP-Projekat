@@ -1,0 +1,76 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+env/
+.env
+.venv/
+venv/
+build/
+dist/
+pip-wheel-metadata/
+*.egg-info/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Java
+*.class
+*.jar
+*.war
+*.ear
+target/
+
+# C/C++ / Build
+bin/
+obj/
+out/
+*.o
+*.so
+*.dll
+*.exe
+
+# MATLAB
+*.mex*
+
+# Logs and databases
+*.log
+*.sql
+*.sqlite
+
+# Coverage
+.coverage
+coverage/
+htmlcov/
+
+# Certificates, keys, secrets
+*.pem
+*.key
+*.crt
+.pfx
+
+# Misc
+.vs/
+.cache/
+/.pytest_cache/
+coverage.xml
+reports/
+
+# Project-specific artifacts
+# Add build artifacts, generated datasets, large outputs, and local config files here
+# e.g. data/processed/ or outputs/
+data/processed/
+outputs/
+
