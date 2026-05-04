@@ -43,11 +43,22 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CSVLoader.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\SmartGrid.Common\SmartGrid.Common.csproj">
+      <Project>{4a9f1b9c-fcb4-4ab6-af57-a69b99d573ca}</Project>
+      <Name>SmartGrid.Common</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\SmartGrid.Server\SmartGrid.Server.csproj">
+      <Project>{fd7649a5-41eb-4599-937d-eb016117c391}</Project>
+      <Name>SmartGrid.Server</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
