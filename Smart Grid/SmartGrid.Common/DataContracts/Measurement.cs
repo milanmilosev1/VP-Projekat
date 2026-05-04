@@ -1,16 +1,27 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Runtime.Serialization;
 
 namespace SmartGrid.Common
 {
+    [DataContract]
     public class Measurement
     {
+        [DataMember]
         public DateTime Timestamp { get; set; }
+
+        [DataMember]
         public double Voltage { get; set; }
+
+        [DataMember]
         public double Current { get; set; }
+
+        [DataMember]
         public double PowerUsage { get; set; }
-        public double Frequency { get; set; }
+
+        [DataMember]
         public FaultType FaultIndicator { get; set; }
-        public List<double> FftValues { get; set; } = new List<double>();
+
+        [DataMember]
+        public double Frequency { get; set; }
     }
 }

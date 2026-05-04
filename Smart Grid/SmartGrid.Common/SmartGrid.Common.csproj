@@ -33,6 +33,8 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.ServiceModel" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -41,9 +43,16 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="FaultType.cs" />
-    <Compile Include="Measurement.cs" />
+    <Compile Include="DataContracts\FaultContracts.cs" />
+    <Compile Include="DataContracts\FaultType.cs" />
+    <Compile Include="Interfaces\ISessionControl.cs" />
+    <Compile Include="Interfaces\IValidator.cs" />
+    <Compile Include="DataContracts\Measurement.cs" />
+    <Compile Include="DataContracts\MetaHeader.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="DataContracts\SessionResponse.cs" />
+    <Compile Include="Validators\MetaValidator.cs" />
+    <Compile Include="Validators\SampleValidator.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
