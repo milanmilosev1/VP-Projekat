@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Runtime.Serialization;
 
 namespace SmartGrid.Common
@@ -23,5 +24,8 @@ namespace SmartGrid.Common
 
         [DataMember]
         public double Frequency { get; set; }
+
+        [DataMember]
+        public List<double> FftValues { get; set; }
     }
 }
