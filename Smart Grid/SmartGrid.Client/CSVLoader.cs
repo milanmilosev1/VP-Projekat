@@ -2,73 +2,95 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Runtime.Remoting.Messaging;
 using SmartGrid.Common;
 
 namespace SmartGrid.Client
 {
-    public class CSVLoader
+    public class CSVLoader : IDisposable
     {
-        public static List<Measurement> LoadFirst100(string filePath,string logPath)
+        private bool disposed = false;
+        private StreamReader _reader;
+        private StreamWriter _logger;
+
+        public CSVLoader(string filePath, string logPath)
+        {
+            _reader = new StreamReader(filePath);
+            _logger = new StreamWriter(logPath, append: false);
+        }
+
+        public List<Measurement> LoadFirst100(string filePath,string logPath)
         {
             List<Measurement> measurements = new List<Measurement>();
             var culture = CultureInfo.InvariantCulture;
-
-            using(StreamReader reader = new StreamReader(filePath)) 
-            using(StreamWriter log = new StreamWriter(logPath))
+            string line;
+            bool headerSkipped = false;
+            
+            while((line = _reader.ReadLine()) != null) 
             {
-                string line;
-                bool headerSkipped = false;
-                while((line = reader.ReadLine()) != null) 
+                if(!headerSkipped) 
                 {
-                    if(!headerSkipped) 
+                    headerSkipped = true;
+                    continue;
+                }
+                try
+                {
+                    var parts = line.Split(',');
+                    if (parts.Length < 6)
                     {
-                        headerSkipped = true;
+                        _logger.WriteLine($"Nedovoljan broj kolona.");
                         continue;
                     }
-                    try
-                    {
-                        var parts = line.Split(',');
-                        if (parts.Length < 6)
-                        {
 
-                            log.WriteLine($"Nedovoljan broj kolona.");
-                            continue;
-                        }
-
-                        Measurement m = new Measurement();
-                        
-                        m.Timestamp = DateTime.Parse(parts[0], culture);    
-                        m.Voltage = double.Parse(parts[1], culture);
-                        m.Current = double.Parse(parts[2], culture);
-                        m.PowerUsage = double.Parse(parts[3], culture);
-                        m.Frequency = double.Parse(parts[4], culture);
-                        m.FaultIndicator = (FaultType)Enum.Parse(typeof(FaultType), parts[5]);
-                        m.FftValues = new List<double>();
-                        
-                        for(int i = 6; i < parts.Length; i++) 
-                        {
-                            if(!string.IsNullOrWhiteSpace(parts[i])) 
-                            {
-                                m.FftValues.Add(double.Parse(parts[i], culture));
-                            }
-                        }
-                        measurements.Add(m);
-                        if(measurements.Count > 100) 
-                        {
-                            break;
-                        }
-                    } 
-                    catch(Exception ex) 
+                    Measurement m = new Measurement
                     {
-                        log.WriteLine($"Nije validan red: {line}. Greška: {ex.Message}");
+                        Timestamp = DateTime.Parse(parts[0], culture),
+                        Voltage = double.Parse(parts[1], culture),
+                        Current = double.Parse(parts[2], culture),
+                        PowerUsage = double.Parse(parts[3], culture),
+                        Frequency = double.Parse(parts[4], culture),
+                        FaultIndicator = (FaultType)Enum.Parse(typeof(FaultType), parts[5]),
+                        FftValues = new List<double>()
+                    };
+
+                    for (int i = 6; i < parts.Length; i++)
+                    {
+                        if (!string.IsNullOrWhiteSpace(parts[i]))
+                        {
+                            m.FftValues.Add(double.Parse(parts[i], culture));
+                        }
+                    }
+                    measurements.Add(m);
+                    if (measurements.Count >= 100)
+                    {
+                        break;
                     }
                 }
+                catch (Exception ex)
+                {
+                    _logger.WriteLine($"Nije validan red: {line}. Greška: {ex.Message}");
+                }
             }
-            return measurements;
 
+            return measurements;
         }
 
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposed)
+            {
+                if (disposing)
+                {
+                    _logger?.Dispose();
+                    _reader?.Dispose();
+                }
+                disposed = true;
+            }
+        }
 
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
     }
 }
