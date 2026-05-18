@@ -4,7 +4,7 @@ using System.Runtime.Serialization;
 
 namespace SmartGrid.Common
 {
-    [DataContract]
+    [DataContract(Name = "SmartGridSample")]
     public class Measurement
     {
         [DataMember]
@@ -27,5 +27,10 @@ namespace SmartGrid.Common
 
         [DataMember]
         public List<double> FftValues { get; set; }
+
+        public override string ToString()
+        {
+            return $"Timestamp: {Timestamp} | Voltage: {Voltage} | Current: {Current} | PowerUsage: {PowerUsage} | FaultIndicator {FaultIndicator} | Frequency: {Frequency}";
+        }
     }
 }
