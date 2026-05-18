@@ -87,6 +87,10 @@ namespace SmartGrid.Server
                     }
                 }
 
+                //Odkometarisati za testiranje prekida komunikacije
+                //if (_sampleCount == 50)
+                //    throw new CommunicationException("Test test 1 2");
+
                 _sampleMeasurements.Add(sample);
                 _acceptedSampleCount++;
 
@@ -100,16 +104,14 @@ namespace SmartGrid.Server
             catch (FaultException e)
             {
                 Console.WriteLine($"[SAMPLE #{++_sampleCount}]" + e.Reason);
+                _rejectedSampleCount++;
+                return new SessionResponse
+                {
+                    Status = Status.NAK,
+                    Progress = Progress.COMPLETED,
+                    Message = $"Sample #{_sampleCount} not accepted."
+                };
             }
-
-            _rejectedSampleCount++;
-            return new SessionResponse
-            {
-                Status = Status.NAK,
-                Progress = Progress.COMPLETED,
-                Message = $"Sample #{_sampleCount} not accepted."
-            };
-            
         }
 
         [OperationBehavior(AutoDisposeParameters = true)]

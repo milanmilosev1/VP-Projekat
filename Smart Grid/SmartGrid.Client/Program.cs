@@ -1,5 +1,7 @@
 ﻿using SmartGrid.Common;
 using System;
+using System.Configuration;
+using System.IO;
 using System.ServiceModel;
 
 namespace SmartGrid.Client
@@ -8,7 +10,11 @@ namespace SmartGrid.Client
     {
         static void Main(string[] args)
         {
-            using (var loader = new CSVLoader("smart_grid_dataset.csv", "invalid.log"))
+            string databaseUrl = ConfigurationManager.AppSettings["DatabaseURL"];
+            string invalidSamplesUrl = ConfigurationManager.AppSettings["InvalidSamplesRecordURL"];
+            string loggerUrl = ConfigurationManager.AppSettings["LoggerURL"];
+
+            using (var loader = new CSVLoader(databaseUrl, loggerUrl))
             {
                 try
                 {
@@ -35,6 +41,16 @@ namespace SmartGrid.Client
                         {
                             var pushResponse = proxy.PushSample(item);
                             Console.WriteLine($"PushSample: {pushResponse.Status} - {pushResponse.Message}");
+                            if(pushResponse.Status != Status.ACK)
+                            {
+                                using (var stream = new StreamWriter(invalidSamplesUrl, true))
+                                {
+                                    stream.WriteLine($"Status: {pushResponse.Status}");
+                                    stream.WriteLine($"Progress: {pushResponse.Progress}");
+                                    stream.WriteLine($"Message: {pushResponse.Message}");
+                                    stream.WriteLine("--------------------------------");
+                                }
+                            }
                         }
 
                         var endResponse = proxy.EndSession();
