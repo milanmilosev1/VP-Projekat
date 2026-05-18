@@ -9,8 +9,8 @@ namespace SmartGrid.Client
     public class CSVLoader : IDisposable
     {
         private bool disposed = false;
-        private StreamReader _reader;
-        private StreamWriter _logger;
+        private readonly StreamReader _reader;
+        private readonly StreamWriter _logger;
 
         public CSVLoader(string filePath, string logPath)
         {
@@ -18,7 +18,7 @@ namespace SmartGrid.Client
             _logger = new StreamWriter(logPath, append: false);
         }
 
-        public List<Measurement> LoadFirst100(string filePath,string logPath)
+        public List<Measurement> LoadFirst100()
         {
             List<Measurement> measurements = new List<Measurement>();
             var culture = CultureInfo.InvariantCulture;
@@ -82,6 +82,7 @@ namespace SmartGrid.Client
                 {
                     _logger?.Dispose();
                     _reader?.Dispose();
+                    Console.WriteLine("CSVLoader resorces (reader, logger) succesfully closed and freed.");
                 }
                 disposed = true;
             }
