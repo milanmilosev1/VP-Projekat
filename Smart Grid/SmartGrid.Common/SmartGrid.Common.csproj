@@ -43,6 +43,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DataContracts\AnalyticsReport.cs" />
     <Compile Include="DataContracts\FaultContracts.cs" />
     <Compile Include="DataContracts\FaultType.cs" />
     <Compile Include="Interfaces\ISessionControl.cs" />

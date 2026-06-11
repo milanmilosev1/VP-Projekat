@@ -37,7 +37,7 @@ namespace SmartGrid.Client
                     var parts = line.Split(',');
                     if (parts.Length < 6)
                     {
-                        _logger.WriteLine($"Nedovoljan broj kolona.");
+                        _logger.WriteLine($"Too few columns.");
                         continue;
                     }
 
@@ -67,7 +67,7 @@ namespace SmartGrid.Client
                 }
                 catch (Exception ex)
                 {
-                    _logger.WriteLine($"Nije validan red: {line}. Greška: {ex.Message}");
+                    _logger.WriteLine($"Invalid row: {line}. Error message: {ex.Message}");
                 }
             }
 

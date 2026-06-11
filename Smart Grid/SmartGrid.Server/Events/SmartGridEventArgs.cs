@@ -48,6 +48,13 @@ namespace SmartGrid.Server.Events
             Timestamp = DateTime.Now;
         }
 
+        public WarningRaisedEventArgs(string warningType, Measurement sample)
+        {
+            WarningType = warningType;
+            Sample = sample;
+            Timestamp = DateTime.Now;
+        }
+
         public string WarningType { get; }
         public string Direction { get; }
         public double ActualValue { get; }

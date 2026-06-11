@@ -6,6 +6,7 @@ namespace SmartGrid.Common.Validators
     {
         private readonly double _iThreshold;
         private readonly double _vThreshold;
+
         public SampleValidator(double iThreshold, double vThreshold)
         {
             _iThreshold = iThreshold;

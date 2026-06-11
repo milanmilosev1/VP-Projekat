@@ -1,16 +1,17 @@
 ﻿using SmartGrid.Common;
 using SmartGrid.Common.Validators;
+using SmartGrid.Server.Analytics;
 using SmartGrid.Server.Events;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
-using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.ServiceModel;
-using System.Xml.Linq;
 
 namespace SmartGrid.Server
 {
+    [ServiceBehavior(InstanceContextMode = InstanceContextMode.Single)]
     public class SessionControl : ISessionControl
     {
         private MetaHeader _meta;
@@ -23,23 +24,17 @@ namespace SmartGrid.Server
 
         private readonly SmartGridEventHub _events;
         private readonly SmartGridEventLogger _eventLogger;
+        private readonly CurrentAnalytics _currentAnalytics;
+        private readonly VoltageAnalytics _voltageAnalytics;
 
         private static int _sampleCount = 0;
         private static int _acceptedSampleCount = 0;
         private static int _rejectedSampleCount = 0;
 
-        //zadatak 6 - snimanje fajlovi
-        private StreamWriter _measurementsWriter;
-        private StreamWriter _rejectsWriter;
+        private CSVWriter _measurementsWriter;
+        private CSVWriter _rejectsWriter;
         private string _measurementsFilePath;
         private string _rejectsFilePath;
-
-        //zadatak 10 - 
-        private double _currentSum = 0.0;
-        private int _currentCount = 0;
-        private double _previousCurrent = double.NaN;
-
-
 
         public SessionControl()
         {
@@ -50,6 +45,10 @@ namespace SmartGrid.Server
                 _averageDeviationThreshold = double.Parse(ConfigurationManager.AppSettings["AverageDeviationThreshold"]);
                 _events = new SmartGridEventHub();
                 _eventLogger = new SmartGridEventLogger(_events, ConfigurationManager.AppSettings["EventLogURL"]);
+                _currentAnalytics = new CurrentAnalytics(_iThreshold, _averageDeviationThreshold);
+                _voltageAnalytics = new VoltageAnalytics(_vThreshold);
+                _measurementsFilePath = ConfigurationManager.AppSettings["SessionMeasurementsURL"];
+                _rejectsFilePath = ConfigurationManager.AppSettings["RejectsURL"];  
             }
             catch 
             {
@@ -58,49 +57,11 @@ namespace SmartGrid.Server
                 _averageDeviationThreshold = 0.25;
                 _events = new SmartGridEventHub();
                 _eventLogger = new SmartGridEventLogger(_events, "server_events.log");
+                _currentAnalytics = new CurrentAnalytics(_iThreshold, _averageDeviationThreshold);
+                _voltageAnalytics = new VoltageAnalytics(_vThreshold);
+                _measurementsFilePath = "measurements_session.csv";
+                _rejectsFilePath = "rejects.csv";
             }
-        }
-        //zadatak 6 - pomocna struktura,za formatiranje redova u csv 
-        private string MeasurementToCsvRow(Measurement m)
-        {
-            return string.Format(System.Globalization.CultureInfo.InvariantCulture,
-                "{0},{1},{2},{3},{4},{5}",
-                m.Timestamp.ToString("o"),
-                m.Voltage,
-                m.Current,
-                m.PowerUsage,
-                m.FaultIndicator,
-                m.Frequency);
-        }
-
-        // Zadatak 10 - analitika nagle promene struje i odstupanja od proseka
-        private void AnalyzeCurrent(int sampleIndex, double current)
-        {
-            _currentSum += current;
-            _currentCount++;
-            double imean = _currentSum / _currentCount;
-
-            // Detekcija nagle promene - CurrentSpike
-            if (!double.IsNaN(_previousCurrent))
-            {
-                double deltaI = current - _previousCurrent;
-                if (Math.Abs(deltaI) > _iThreshold)
-                {
-                    string direction = deltaI > 0 ? "iznad ocekivanog" : "ispod ocekivanog";
-                    Console.WriteLine($"[CURRENT SPIKE] Uzorak #{sampleIndex}: deltaI={deltaI:F4}, smer={direction}");
-                }
-            }
-
-            // Detekcija odstupanja od tekuceg proseka +/-25%
-            if (_currentCount > 1)
-            {
-                if (current < 0.75 * imean)
-                    Console.WriteLine($"[OUT-OF-BAND] Uzorak #{sampleIndex}: I={current:F4} ispod ocekivane vrednosti (Imean={imean:F4})");
-                else if (current > 1.25 * imean)
-                    Console.WriteLine($"[OUT-OF-BAND] Uzorak #{sampleIndex}: I={current:F4} iznad ocekivane vrednosti (Imean={imean:F4})");
-            }
-
-            _previousCurrent = current;
         }
 
         [OperationBehavior(AutoDisposeParameters = true)]
@@ -112,28 +73,28 @@ namespace SmartGrid.Server
 
             _meta = metaHeader;
             _sampleMeasurements.Clear();
+            _sampleCount = 0;
+            _acceptedSampleCount = 0;
+            _rejectedSampleCount = 0;
             _sessionActive = true;
             _events.RaiseTransferStarted($"Transfer started at {metaHeader.Timestamp:O}.");
-            // Reset analitike (Zadatak 10)
-            _currentSum = 0.0;
-            _currentCount = 0;
-            _previousCurrent = double.NaN;
+            _currentAnalytics.Reset();
+            _voltageAnalytics.Reset();
 
-            // Zadatak 6 - kreiranje foldera i fajlova sesije
             string sessionId = metaHeader.Timestamp.ToString("yyyyMMdd_HHmmss");
             string sessionDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "sessions", sessionId);
             Directory.CreateDirectory(sessionDir);
 
-            _measurementsFilePath = Path.Combine(sessionDir, "measurements_session.csv");
-            _rejectsFilePath = Path.Combine(sessionDir, "rejects.csv");
+            _measurementsFilePath = Path.Combine(sessionDir, _measurementsFilePath);
+            _rejectsFilePath = Path.Combine(sessionDir, _rejectsFilePath);
 
-            _measurementsWriter = new StreamWriter(new FileStream(_measurementsFilePath, FileMode.Create, FileAccess.Write, FileShare.None), System.Text.Encoding.UTF8);
-            _rejectsWriter = new StreamWriter(new FileStream(_rejectsFilePath, FileMode.Create, FileAccess.Write, FileShare.None), System.Text.Encoding.UTF8);
+            _measurementsWriter = new CSVWriter(_measurementsFilePath);
+            _rejectsWriter = new CSVWriter(_rejectsFilePath);
 
             _measurementsWriter.WriteLine("Timestamp,Voltage,Current,PowerUsage,FaultIndicator,Frequency");
             _rejectsWriter.WriteLine("Reason,Timestamp,Voltage,Current,PowerUsage,FaultIndicator,Frequency");
 
-            Console.WriteLine($" Fajlovi sesije kreirani u: {sessionDir}");
+            Console.WriteLine($"Session files created in: {sessionDir}");
 
             return new SessionResponse
             {
@@ -141,7 +102,6 @@ namespace SmartGrid.Server
                 Progress = Progress.IN_PROGRESS,
                 Message = $"Session started at {metaHeader.Timestamp:O}"
             };
-
         }
 
         [OperationBehavior(AutoDisposeParameters = true)]
@@ -165,22 +125,19 @@ namespace SmartGrid.Server
                     if (Math.Abs(sample.Voltage - avgV) > _averageDeviationThreshold * avgV)
                     {
                         _events.RaiseWarningRaised("VoltageAverageDeviation", GetDirection(sample.Voltage, avgV), sample.Voltage, avgV, _averageDeviationThreshold, sample);
-                        _rejectedSampleCount++; 
                         _rejectedSampleCount++;
-                        //zadatak 6 - snimanje odbacenih uzoraka u poseban fajl
-                        _rejectsWriter?.WriteLine("VoltageDeviation," + MeasurementToCsvRow(sample));
-                        _rejectsWriter?.Flush();
-                        return new SessionResponse { Status = Status.NAK, Progress = Progress.IN_PROGRESS, Message = "Voltage deviates > 25% from average." };
+                        _sampleCount++;
+                        _rejectsWriter?.WriteReject("VoltageDeviation", sample);
+                        return new SessionResponse { Status = Status.NAK, Progress = Progress.IN_PROGRESS, Message = $"Voltage deviates > {_averageDeviationThreshold * 100}% from average." };
                     }
 
                     if (Math.Abs(sample.Current - avgI) > _averageDeviationThreshold * avgI)
                     {
                         _events.RaiseWarningRaised("CurrentAverageDeviation", GetDirection(sample.Current, avgI), sample.Current, avgI, _averageDeviationThreshold, sample);
                         _rejectedSampleCount++;
-                        //zadatak 6 - snimanje odbacenih uzoraka u poseban fajl
-                        _rejectsWriter?.WriteLine("CurrentDeviation," + MeasurementToCsvRow(sample));
-                        _rejectsWriter?.Flush();
-                        return new SessionResponse { Status = Status.NAK, Progress = Progress.IN_PROGRESS, Message = "Current deviates > 25% from average." };
+                        _sampleCount++;
+                        _rejectsWriter?.WriteReject("CurrentDeviation", sample);
+                        return new SessionResponse { Status = Status.NAK, Progress = Progress.IN_PROGRESS, Message = $"Current deviates > {_averageDeviationThreshold * 100}% from average." };
                     }
                 }
 
@@ -190,13 +147,12 @@ namespace SmartGrid.Server
 
                 _sampleMeasurements.Add(sample);
                 _acceptedSampleCount++;
-                // Zadatak 6 - upisivanje prihvacenih uzoraka u measurements_session.csv
-                _measurementsWriter?.WriteLine(MeasurementToCsvRow(sample));
-                _measurementsWriter?.Flush();
 
-                // Zadatak 10 - analitika struje
+                _measurementsWriter?.WriteMeasurement(sample);
+
                 _sampleCount++;
-                AnalyzeCurrent(_sampleCount, sample.Current);
+                _voltageAnalytics.Analyze(_sampleCount, sample.Voltage);
+                _currentAnalytics.Analyze(_sampleCount, sample.Current);
 
                 return new SessionResponse
                 {
@@ -207,11 +163,11 @@ namespace SmartGrid.Server
             }
             catch (FaultException e)
             {
-                Console.WriteLine($"[SAMPLE #{++_sampleCount}]" + e.Reason);
+                _events.RaiseValidationWarning(e.Reason.ToString(), sample);
                 _rejectedSampleCount++;
-                // Zadatak 6 - upisi odbaceni uzorak u rejects.csv
-                _rejectsWriter?.WriteLine("ValidationError," + MeasurementToCsvRow(sample));
-                _rejectsWriter?.Flush();
+                
+                _rejectsWriter?.WriteReject("ValidationError", sample);
+
                 return new SessionResponse
                 {
                     Status = Status.NAK,
@@ -230,35 +186,45 @@ namespace SmartGrid.Server
             _sessionActive = false;
             _events.RaiseTransferCompleted($"Transfer completed. Processed {_sampleCount} samples.", _sampleCount, _acceptedSampleCount, _rejectedSampleCount);
 
-            // zadatak 6 resetovanje broja odbacenih i prihvacenih uzoraka
-            _measurementsWriter?.Flush();
+            Console.WriteLine("-----------------------------------------------------------------------------------------");
+            Console.WriteLine($"Measurements saved in: {_measurementsFilePath}");
+            Console.WriteLine($"Rejects saved in: {_rejectsFilePath}");
+            Console.WriteLine("-----------------------------------------------------------------------------------------");
+
             _measurementsWriter?.Dispose();
-            _measurementsWriter = null;
-
-            _rejectsWriter?.Flush();
             _rejectsWriter?.Dispose();
-            _rejectsWriter = null;
-
-            Console.WriteLine($" Merenja sacuvana u: {_measurementsFilePath}");
-            Console.WriteLine($" Odbacena merenja sacuvana u: {_rejectsFilePath}");
 
             return new SessionResponse
             {
                 Status = Status.ACK,
                 Progress = Progress.COMPLETED,
                 Message = $"Session ended successfully. Processed {_sampleCount} samples.\n\nAccepted: {_acceptedSampleCount}\nRejected: {_rejectedSampleCount}\n"
-
             };
-        }
-
-        private static string GetSetting(IEnumerable<XElement> settings, string key, string defaultValue)
-        {
-            return settings.FirstOrDefault(x => x.Attribute("key")?.Value == key)?.Attribute("value")?.Value ?? defaultValue;
         }
 
         private static string GetDirection(double actualValue, double expectedValue)
         {
-            return actualValue > expectedValue ? "iznad ocekivanog" : "ispod ocekivanog";
+            return actualValue > expectedValue ? "above expected" : "under expected";
+        }
+
+        [OperationBehavior(AutoDisposeParameters = true)]
+        public AnalyticsReport GetAnalyticsReport()
+        {
+            var report = new AnalyticsReport
+            {
+                ProcessedSamples = _sampleCount,
+                AcceptedSamples = _acceptedSampleCount,
+                RejectedSamples = _rejectedSampleCount,
+                AverageVoltage = _sampleMeasurements.Count > 0 ? _sampleMeasurements.Average(m => m.Voltage) : 0,
+                AverageCurrent = _sampleMeasurements.Count > 0 ? _sampleMeasurements.Average(m => m.Current) : 0,
+                AveragePowerUsage = _sampleMeasurements.Count > 0 ? _sampleMeasurements.Average(m => m.PowerUsage) : 0,
+                AverageFrequency = _sampleMeasurements.Count > 0 ? _sampleMeasurements.Average(m => m.Frequency) : 0
+            };
+
+            report.Records.AddRange(_voltageAnalytics.GetRecords());
+            report.Records.AddRange(_currentAnalytics.GetRecords());
+
+            return report;
         }
     }
 }

@@ -8,6 +8,7 @@ namespace SmartGrid.Server.Events
         public event SampleReceivedEventHandler OnSampleReceived;
         public event TransferEventHandler OnTransferCompleted;
         public event WarningRaisedEventHandler OnWarningRaised;
+        public event WarningRaisedEventHandler OnValidationWarningRaised;
 
         public void RaiseTransferStarted(string message)
         {
@@ -27,6 +28,11 @@ namespace SmartGrid.Server.Events
         public void RaiseWarningRaised(string warningType, string direction, double actualValue, double expectedValue, double threshold, Measurement sample)
         {
             OnWarningRaised?.Invoke(this, new WarningRaisedEventArgs(warningType, direction, actualValue, expectedValue, threshold, sample));
+        }
+
+        public void RaiseValidationWarning(string warningType, Measurement sample)
+        {
+            OnWarningRaised(this, new WarningRaisedEventArgs(warningType, sample));
         }
     }
 }
