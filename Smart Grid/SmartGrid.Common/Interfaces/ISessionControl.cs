@@ -19,5 +19,8 @@ namespace SmartGrid.Common
         [OperationContract]
         [FaultContract(typeof(ValidationFault))]
         SessionResponse EndSession();
+
+        [OperationContract]
+        AnalyticsReport GetAnalyticsReport();
     }
 }

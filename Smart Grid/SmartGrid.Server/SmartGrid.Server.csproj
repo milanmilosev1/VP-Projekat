@@ -45,6 +45,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Analytics\CurrentAnalytics.cs" />
+    <Compile Include="Analytics\VoltageAnalytics.cs" />
+    <Compile Include="CSVWriter.cs" />
     <Compile Include="Events\SmartGridEventArgs.cs" />
     <Compile Include="Events\SmartGridEventDelegates.cs" />
     <Compile Include="Events\SmartGridEventHub.cs" />

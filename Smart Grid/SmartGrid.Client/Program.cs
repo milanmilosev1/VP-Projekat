@@ -55,6 +55,15 @@ namespace SmartGrid.Client
 
                         var endResponse = proxy.EndSession();
                         Console.WriteLine($"EndSession: {endResponse.Status} - {endResponse.Message}");
+
+                        Console.Write("Do you want to see analytics? (y/n): ");
+                        string analyticsAnswer = Console.ReadLine();
+                        if (string.Equals(analyticsAnswer, "y", StringComparison.OrdinalIgnoreCase))
+                        {
+                            var analyticsReport = proxy.GetAnalyticsReport();
+                            Console.Clear();
+                            PrintAnalyticsReport(analyticsReport);
+                        }
                     }
                 }
                 catch (FaultException<ValidationFault> vf)
@@ -72,6 +81,54 @@ namespace SmartGrid.Client
             } 
 
             Console.ReadKey();
+        }
+
+        private static void PrintAnalyticsReport(AnalyticsReport report)
+        {
+            Console.WriteLine("SMART GRID ANALYTICS REPORT");
+            Console.WriteLine("========================================");
+            Console.WriteLine($"Processed samples: {report.ProcessedSamples}");
+            Console.WriteLine($"Accepted samples:  {report.AcceptedSamples}");
+            Console.WriteLine($"Rejected samples:  {report.RejectedSamples}");
+            Console.WriteLine($"Average voltage:   {report.AverageVoltage:F4}");
+            Console.WriteLine($"Average current:   {report.AverageCurrent:F4}");
+            Console.WriteLine($"Average power:     {report.AveragePowerUsage:F4}");
+            Console.WriteLine($"Average frequency: {report.AverageFrequency:F4}");
+            Console.WriteLine();
+
+            if (report.Records == null || report.Records.Count == 0)
+            {
+                Console.WriteLine("No analytics warnings detected for this session.");
+                return;
+            }
+
+            PrintRecordsByType(report, "VoltageSpike", "Voltage spikes");
+            PrintRecordsByType(report, "CurrentSpike", "Current spikes");
+            PrintRecordsByType(report, "OutOfBandWarning", "Out-of-band current warnings");
+        }
+
+        private static void PrintRecordsByType(AnalyticsReport report, string type, string title)
+        {
+            Console.WriteLine(title);
+            Console.WriteLine("----------------------------------------");
+
+            bool hasRecords = false;
+            foreach (var record in report.Records)
+            {
+                if (record.Type != type)
+                    continue;
+
+                hasRecords = true;
+                Console.WriteLine($"Sample #{record.SampleIndex}: {record.Message}");
+                Console.WriteLine($"  Actual={record.ActualValue:F4}; Reference={record.ReferenceValue:F4}; Delta={record.Delta:F4}; Direction={record.Direction}");
+            }
+
+            if (!hasRecords)
+            {
+                Console.WriteLine("No records.");
+            }
+
+            Console.WriteLine();
         }
     }
 }

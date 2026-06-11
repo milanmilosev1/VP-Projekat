@@ -15,6 +15,7 @@ namespace SmartGrid.Server.Events
             eventHub.OnSampleReceived += LogSampleReceived;
             eventHub.OnTransferCompleted += LogTransferCompleted;
             eventHub.OnWarningRaised += LogWarningRaised;
+            eventHub.OnValidationWarningRaised += LogValidationWarning;
         }
 
         private void LogTransferStarted(object sender, TransferEventArgs e)
@@ -29,12 +30,17 @@ namespace SmartGrid.Server.Events
 
         private void LogTransferCompleted(object sender, TransferEventArgs e)
         {
-            WriteLog($"[{e.Timestamp:O}] OnTransferCompleted: {e.Message} Processed={e.ProcessedSamples}, Accepted={e.AcceptedSamples}, Rejected={e.RejectedSamples}");
+            WriteLog($"\n[{e.Timestamp:O}] OnTransferCompleted: {e.Message} Processed={e.ProcessedSamples}, Accepted={e.AcceptedSamples}, Rejected={e.RejectedSamples}");
         }
 
         private void LogWarningRaised(object sender, WarningRaisedEventArgs e)
         {
             WriteLog($"[{e.Timestamp:O}] OnWarningRaised: {e.WarningType}, {e.Direction}, Actual={e.ActualValue}, Expected={e.ExpectedValue}, Threshold={e.Threshold:P0}");
+        }
+
+        private void LogValidationWarning(object sender, WarningRaisedEventArgs e)
+        {
+            WriteLog($"[{e.Timestamp:O}] OnValidationWarningRaised: {e.WarningType}, Voltage={e.Sample.Voltage}, Current={e.Sample.Current}, Power Usage={e.Sample.PowerUsage}, Frequency={e.Sample.Frequency}");
         }
 
         private void WriteLog(string message)
