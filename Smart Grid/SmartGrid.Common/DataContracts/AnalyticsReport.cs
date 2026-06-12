@@ -56,6 +56,12 @@ namespace SmartGrid.Common
 
         [DataMember]
         public double AverageFrequency { get; set; }
+        
+        [DataMember]
+        public double MaxVoltage { get; set; }
+
+        [DataMember]
+        public double MaxCurrent { get; set; }
 
         [DataMember]
         public List<AnalyticsRecord> Records { get; set; }

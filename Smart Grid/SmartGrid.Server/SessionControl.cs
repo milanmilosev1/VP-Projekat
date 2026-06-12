@@ -22,6 +22,9 @@ namespace SmartGrid.Server
         private readonly double _vThreshold;
         private readonly double _averageDeviationThreshold;
 
+        private readonly double _iSpikeThreshold;
+        private readonly double _vSpikeThreshold;
+
         private readonly SmartGridEventHub _events;
         private readonly SmartGridEventLogger _eventLogger;
         private readonly CurrentAnalytics _currentAnalytics;
@@ -40,13 +43,15 @@ namespace SmartGrid.Server
         {
             try 
             {
-                _iThreshold = double.Parse(ConfigurationManager.AppSettings["I_Threshold"]);
-                _vThreshold = double.Parse(ConfigurationManager.AppSettings["V_Threshold"]);
+                _iThreshold = double.Parse(ConfigurationManager.AppSettings["I_threshold"]);
+                _vThreshold = double.Parse(ConfigurationManager.AppSettings["V_threshold"]);
+                _iSpikeThreshold = double.Parse(ConfigurationManager.AppSettings["I_spike_threshold"]);
+                _vSpikeThreshold = double.Parse(ConfigurationManager.AppSettings["V_spike_threshold"]);
                 _averageDeviationThreshold = double.Parse(ConfigurationManager.AppSettings["AverageDeviationThreshold"]);
                 _events = new SmartGridEventHub();
                 _eventLogger = new SmartGridEventLogger(_events, ConfigurationManager.AppSettings["EventLogURL"]);
-                _currentAnalytics = new CurrentAnalytics(_iThreshold, _averageDeviationThreshold);
-                _voltageAnalytics = new VoltageAnalytics(_vThreshold);
+                _currentAnalytics = new CurrentAnalytics(_iSpikeThreshold, _averageDeviationThreshold);
+                _voltageAnalytics = new VoltageAnalytics(_vSpikeThreshold);
                 _measurementsFilePath = ConfigurationManager.AppSettings["SessionMeasurementsURL"];
                 _rejectsFilePath = ConfigurationManager.AppSettings["RejectsURL"];  
             }
@@ -107,10 +112,15 @@ namespace SmartGrid.Server
         [OperationBehavior(AutoDisposeParameters = true)]
         public SessionResponse PushSample(Measurement sample)
         {
+            Console.ForegroundColor = ConsoleColor.Magenta;
+            Console.WriteLine(new string('-', Console.WindowWidth));
+            Console.ResetColor();
             try
             {
                 if (!_sessionActive)
                     throw new FaultException<ValidationFault>(new ValidationFault { Reason = "No active session. Call StartSession first." });
+
+                _sampleMeasurements.Add(sample);
 
                 var sampleValidator = new SampleValidator(_iThreshold, _vThreshold);
                 sampleValidator.Validate(sample);
@@ -145,7 +155,7 @@ namespace SmartGrid.Server
                 //if (_sampleCount == 50)
                 //    throw new CommunicationException("Test test 1 2");
 
-                _sampleMeasurements.Add(sample);
+               
                 _acceptedSampleCount++;
 
                 _measurementsWriter?.WriteMeasurement(sample);
@@ -165,7 +175,11 @@ namespace SmartGrid.Server
             {
                 _events.RaiseValidationWarning(e.Reason.ToString(), sample);
                 _rejectedSampleCount++;
+                _sampleCount++;
                 
+                _voltageAnalytics.Analyze(_sampleCount, sample.Voltage);
+                _currentAnalytics.Analyze(_sampleCount, sample.Current);
+
                 _rejectsWriter?.WriteReject("ValidationError", sample);
 
                 return new SessionResponse
@@ -184,12 +198,23 @@ namespace SmartGrid.Server
                 throw new FaultException<ValidationFault>(new ValidationFault { Reason = "No active session to end." }, new FaultReason("No active session to end."));
 
             _sessionActive = false;
+            Console.WriteLine();
+            Console.ForegroundColor = ConsoleColor.Magenta;
+            Console.WriteLine(new string('=', Console.WindowWidth));
+            Console.ResetColor();
+
             _events.RaiseTransferCompleted($"Transfer completed. Processed {_sampleCount} samples.", _sampleCount, _acceptedSampleCount, _rejectedSampleCount);
 
-            Console.WriteLine("-----------------------------------------------------------------------------------------");
+            Console.ForegroundColor = ConsoleColor.Magenta;
+            Console.WriteLine();
+            Console.WriteLine(new string('=', Console.WindowWidth));
+            Console.WriteLine();
             Console.WriteLine($"Measurements saved in: {_measurementsFilePath}");
             Console.WriteLine($"Rejects saved in: {_rejectsFilePath}");
-            Console.WriteLine("-----------------------------------------------------------------------------------------");
+            Console.WriteLine();
+            Console.WriteLine(new string('=', Console.WindowWidth));
+            Console.WriteLine();
+            Console.ResetColor();
 
             _measurementsWriter?.Dispose();
             _rejectsWriter?.Dispose();
@@ -218,7 +243,9 @@ namespace SmartGrid.Server
                 AverageVoltage = _sampleMeasurements.Count > 0 ? _sampleMeasurements.Average(m => m.Voltage) : 0,
                 AverageCurrent = _sampleMeasurements.Count > 0 ? _sampleMeasurements.Average(m => m.Current) : 0,
                 AveragePowerUsage = _sampleMeasurements.Count > 0 ? _sampleMeasurements.Average(m => m.PowerUsage) : 0,
-                AverageFrequency = _sampleMeasurements.Count > 0 ? _sampleMeasurements.Average(m => m.Frequency) : 0
+                AverageFrequency = _sampleMeasurements.Count > 0 ? _sampleMeasurements.Average(m => m.Frequency) : 0,
+                MaxVoltage = _sampleMeasurements.Max(x => x.Voltage),
+                MaxCurrent = _sampleMeasurements.Max(x => x.Current)
             };
 
             report.Records.AddRange(_voltageAnalytics.GetRecords());

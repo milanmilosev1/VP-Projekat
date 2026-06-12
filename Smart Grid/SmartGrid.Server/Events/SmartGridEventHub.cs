@@ -8,7 +8,8 @@ namespace SmartGrid.Server.Events
         public event SampleReceivedEventHandler OnSampleReceived;
         public event TransferEventHandler OnTransferCompleted;
         public event WarningRaisedEventHandler OnWarningRaised;
-        public event WarningRaisedEventHandler OnValidationWarningRaised;
+        public event ValidationWarningEventHandler OnValidationWarningRaised;
+        public event VoltageSpikeEventHandler OnVoltageSpike;
 
         public void RaiseTransferStarted(string message)
         {
@@ -32,7 +33,12 @@ namespace SmartGrid.Server.Events
 
         public void RaiseValidationWarning(string warningType, Measurement sample)
         {
-            OnWarningRaised(this, new WarningRaisedEventArgs(warningType, sample));
+            OnValidationWarningRaised?.Invoke(this, new ValidationWarningEventArgs(warningType, sample));
+        }
+
+        public void RaiseVoltageSpike(double actualVoltage, double previousVoltage, string direction)
+        {
+            OnVoltageSpike?.Invoke(this, new VoltageSpikeEventArgs(actualVoltage, previousVoltage, direction));
         }
     }
 }

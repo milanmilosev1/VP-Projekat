@@ -49,8 +49,8 @@ namespace SmartGrid.Server.Analytics
             if (Math.Abs(deltaI) <= _currentThreshold)
                 return;
 
-            string direction = deltaI > 0 ? "iznad ocekivanog" : "ispod ocekivanog";
             string reportDirection = deltaI > 0 ? "above expected" : "under expected";
+
             _records.Add(new AnalyticsRecord
             {
                 Type = "CurrentSpike",
@@ -61,8 +61,6 @@ namespace SmartGrid.Server.Analytics
                 Delta = deltaI,
                 Message = $"Current spike detected on sample #{sampleIndex}: DeltaI={deltaI:F4}, direction={reportDirection}"
             });
-
-            Console.WriteLine($"[CURRENT SPIKE] Uzorak #{sampleIndex}: deltaI={deltaI:F4}, smer={direction}");
         }
 
         private void DetectOutOfBandCurrent(int sampleIndex, double current, double currentMean)
@@ -76,12 +74,10 @@ namespace SmartGrid.Server.Analytics
             if (current < lowerLimit)
             {
                 AddOutOfBandRecord(sampleIndex, current, currentMean, current - currentMean, "under expected");
-                Console.WriteLine($"[OUT-OF-BAND] Uzorak #{sampleIndex}: I={current:F4} ispod ocekivane vrednosti (Imean={currentMean:F4})");
             }
             else if (current > upperLimit)
             {
                 AddOutOfBandRecord(sampleIndex, current, currentMean, current - currentMean, "above expected");
-                Console.WriteLine($"[OUT-OF-BAND] Uzorak #{sampleIndex}: I={current:F4} iznad ocekivane vrednosti (Imean={currentMean:F4})");
             }
         }
 

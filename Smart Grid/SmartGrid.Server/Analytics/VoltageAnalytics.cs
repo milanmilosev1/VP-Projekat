@@ -1,4 +1,5 @@
 using SmartGrid.Common;
+using SmartGrid.Server.Events;
 using System;
 using System.Collections.Generic;
 
@@ -9,6 +10,7 @@ namespace SmartGrid.Server.Analytics
         private readonly double _voltageThreshold;
         private readonly List<AnalyticsRecord> _records = new List<AnalyticsRecord>();
         private double _previousVoltage = double.NaN;
+        private readonly SmartGridEventHub events = new SmartGridEventHub();
 
         public VoltageAnalytics(double voltageThreshold)
         {
@@ -30,6 +32,7 @@ namespace SmartGrid.Server.Analytics
                 {
                     string direction = deltaV > 0 ? "above expected" : "under expected";
                     string message = $"Voltage spike detected on sample #{sampleIndex}: DeltaV={deltaV:F4}, direction={direction}";
+                    events.RaiseVoltageSpike(voltage, _previousVoltage, direction);
 
                     _records.Add(new AnalyticsRecord
                     {
@@ -41,8 +44,6 @@ namespace SmartGrid.Server.Analytics
                         Delta = deltaV,
                         Message = message
                     });
-
-                    Console.WriteLine($"[VOLTAGE SPIKE] Uzorak #{sampleIndex}: deltaV={deltaV:F4}, smer={direction}");
                 }
             }
 

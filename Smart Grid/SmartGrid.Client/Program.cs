@@ -40,9 +40,10 @@ namespace SmartGrid.Client
                         foreach (var item in data)
                         {
                             var pushResponse = proxy.PushSample(item);
-                            Console.WriteLine($"PushSample: {pushResponse.Status} - {pushResponse.Message}");
                             if(pushResponse.Status != Status.ACK)
                             {
+                                Console.ForegroundColor = ConsoleColor.Red;
+                                Console.WriteLine($"PushSample: {pushResponse.Status} - {pushResponse.Message}");
                                 using (var stream = new StreamWriter(invalidSamplesUrl, true))
                                 {
                                     stream.WriteLine($"Status: {pushResponse.Status}");
@@ -50,13 +51,22 @@ namespace SmartGrid.Client
                                     stream.WriteLine($"Message: {pushResponse.Message}");
                                     stream.WriteLine("--------------------------------");
                                 }
+                                Console.ResetColor();
+                            }
+                            else
+                            {
+                                Console.ForegroundColor = ConsoleColor.Green;
+                                Console.WriteLine($"PushSample: {pushResponse.Status} - {pushResponse.Message}");
+                                Console.ResetColor();
                             }
                         }
 
                         var endResponse = proxy.EndSession();
                         Console.WriteLine($"EndSession: {endResponse.Status} - {endResponse.Message}");
 
+                        Console.ForegroundColor = ConsoleColor.Blue;
                         Console.Write("Do you want to see analytics? (y/n): ");
+                        Console.ResetColor();
                         string analyticsAnswer = Console.ReadLine();
                         if (string.Equals(analyticsAnswer, "y", StringComparison.OrdinalIgnoreCase))
                         {
@@ -85,7 +95,8 @@ namespace SmartGrid.Client
 
         private static void PrintAnalyticsReport(AnalyticsReport report)
         {
-            Console.WriteLine("SMART GRID ANALYTICS REPORT");
+            Console.ForegroundColor = ConsoleColor.Blue;
+            Console.WriteLine("\n\nSMART GRID ANALYTICS REPORT");
             Console.WriteLine("========================================");
             Console.WriteLine($"Processed samples: {report.ProcessedSamples}");
             Console.WriteLine($"Accepted samples:  {report.AcceptedSamples}");
@@ -94,6 +105,9 @@ namespace SmartGrid.Client
             Console.WriteLine($"Average current:   {report.AverageCurrent:F4}");
             Console.WriteLine($"Average power:     {report.AveragePowerUsage:F4}");
             Console.WriteLine($"Average frequency: {report.AverageFrequency:F4}");
+            Console.WriteLine($"Max voltage:       {report.MaxVoltage:F4}");
+            Console.WriteLine($"Max current:       {report.MaxCurrent:F4}");
+            Console.ResetColor();
             Console.WriteLine();
 
             if (report.Records == null || report.Records.Count == 0)
@@ -109,8 +123,9 @@ namespace SmartGrid.Client
 
         private static void PrintRecordsByType(AnalyticsReport report, string type, string title)
         {
+            Console.ForegroundColor = ConsoleColor.Cyan;
             Console.WriteLine(title);
-            Console.WriteLine("----------------------------------------");
+            Console.WriteLine(new string('=', Console.WindowWidth));
 
             bool hasRecords = false;
             foreach (var record in report.Records)
@@ -121,6 +136,7 @@ namespace SmartGrid.Client
                 hasRecords = true;
                 Console.WriteLine($"Sample #{record.SampleIndex}: {record.Message}");
                 Console.WriteLine($"  Actual={record.ActualValue:F4}; Reference={record.ReferenceValue:F4}; Delta={record.Delta:F4}; Direction={record.Direction}");
+                Console.WriteLine("--------------------------------------------------------------------------------------------------");
             }
 
             if (!hasRecords)
@@ -129,6 +145,7 @@ namespace SmartGrid.Client
             }
 
             Console.WriteLine();
+            Console.ResetColor();
         }
     }
 }

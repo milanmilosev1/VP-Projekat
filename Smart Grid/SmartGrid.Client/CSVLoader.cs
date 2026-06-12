@@ -60,7 +60,7 @@ namespace SmartGrid.Client
                         }
                     }
                     measurements.Add(m);
-                    if (measurements.Count >= 100)
+                    if (measurements.Count >= 200)
                     {
                         break;
                     }
