@@ -17,6 +17,9 @@ namespace SmartGrid.Common.Validators
             if (sample is null)
                 throw new FaultException<DataFormatFault>(new DataFormatFault { Reason = "Sample payload is null." }, new FaultReason("Sample payload is null."));
 
+            if (sample?.Voltage == null || sample?.Current == null || sample?.PowerUsage == null || sample?.FaultIndicator == null || sample?.Frequency == null)
+                throw new FaultException<DataFormatFault>(new DataFormatFault { Reason = "Some of the fields are null." }, new FaultReason("Some of the fields are null."));
+
             if (sample.Voltage <= 0)
                 throw new FaultException<ValidationFault>(new ValidationFault { Reason = "Voltage must be > 0." }, new FaultReason("Voltage must be > 0."));
 

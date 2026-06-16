@@ -55,13 +55,6 @@ namespace SmartGrid.Server.Events
             Sample = sample;
             Timestamp = DateTime.Now;
         }
-
-        public WarningRaisedEventArgs(string warningType, Measurement sample)
-        {
-            WarningType = warningType;
-            Sample = sample;
-            Timestamp = DateTime.Now;
-        }
     }
 
     public class ValidationWarningEventArgs
